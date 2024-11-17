@@ -161,7 +161,7 @@ Here is the final result generated from **Gephi**:
 """)
 
 # Display Gephi-generated image
-st.image("final.png", caption="Gephi Visualization of Character Interactions")
+st.image("Final.png", caption="Gephi Visualization of Character Interactions")
 
 # --- Step 5: Code Walkthrough ---
 st.markdown("### Step 5: Code Walkthrough")
