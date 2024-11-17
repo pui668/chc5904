@@ -1,0 +1,147 @@
+import streamlit as st
+import pandas as pd
+import networkx as nx
+from pyvis.network import Network
+import matplotlib.pyplot as plt
+
+# --- Page Title ---
+st.title("Character Interaction Network Analysis")
+
+# --- Step 1: Upload CSV File ---
+st.header("Upload Your Data")
+uploaded_file = st.file_uploader("Upload CSV file containing character interactions", type="csv")
+
+if uploaded_file:
+    # Load the data into a pandas DataFrame
+    df = pd.read_csv(uploaded_file)
+    st.subheader("Raw Data")
+    st.write("Here is the raw data used for the analysis:")
+    st.write(df)
+
+    # --- Step 2: Build the Network ---
+    st.header("Social Network Visualization")
+    
+    # Create a NetworkX graph from the DataFrame
+    G = nx.Graph()
+    for index, row in df.iterrows():
+        G.add_edge(row['Source'], row['Target'], weight=row['Weight'])
+    
+    # Visualize the network using PyVis
+    net = Network(height="600px", width="100%", notebook=True)
+    net.from_nx(G)
+    net.show("network.html")
+    
+    # Display the interactive PyVis network graph
+    st.write("Interactive Character Network:")
+    HtmlFile = open("network.html", 'r', encoding='utf-8')
+    source_code = HtmlFile.read()
+    st.components.v1.html(source_code, height=600)
+
+    # --- Step 3: Display Centrality Metrics ---
+    st.header("Centrality Metrics")
+
+    # Degree Centrality
+    degree_centrality = nx.degree_centrality(G)
+    st.subheader("Top 5 Characters by Degree Centrality")
+    top_degree = sorted(degree_centrality.items(), key=lambda x: x[1], reverse=True)[:5]
+    st.write(pd.DataFrame(top_degree, columns=["Character", "Degree Centrality"]))
+
+    # Betweenness Centrality
+    betweenness_centrality = nx.betweenness_centrality(G)
+    st.subheader("Top 5 Characters by Betweenness Centrality")
+    top_betweenness = sorted(betweenness_centrality.items(), key=lambda x: x[1], reverse=True)[:5]
+    st.write(pd.DataFrame(top_betweenness, columns=["Character", "Betweenness Centrality"]))
+
+    # --- Step 4: Code Display ---
+    st.header("Code Used for Analysis")
+
+    code = '''
+import jieba
+import re
+from collections import Counter
+import csv
+
+base_directory = r'C:\\Users\\puipu\\Documents\\MScGAH\\CHC5904\\Second Hands on Assignment'
+
+with open(f'{base_directory}\\chapters_10_20.txt', 'r', encoding='utf-8') as file:
+    text = file.read()
+
+character_variations = {
+    '賈寶玉': ['賈寶玉', '寶玉', '玉兄', '賈公子', '賈二爺'],
+    '林黛玉': ['林黛玉', '黛玉', '林妹妹', '林姑娘', '黛'],
+    '薛寶釵': ['薛寶釵', '寶釵', '薛小姐', '薛姑娘', '釵姐', '薛姨媽'],
+    '襲人': ['襲人', '花襲人', '襲姑娘'],
+    '鴛鴦': ['鴛鴦', '鴛鴦姐'],
+    '賈母': ['賈母', '老祖宗', '賈老太君', '賈老祖', '老太太', '太君'],
+    '賈政': ['賈政', '政老爺', '賈二老爺'],
+    '王熙鳳': ['王熙鳳', '鳳姐', '鳳丫頭', '熙鳳'],
+    '賈璉': ['賈璉', '璉二爺', '璉哥', '賈璉二爺'],
+    '賈惜春': ['賈惜春', '惜春', '賈四姑娘', '四姑娘'],
+    '史湘雲': ['史湘雲', '湘雲', '雲姑娘', '史大姑娘', '湘雲姑娘'],
+    '賈環': ['賈環', '環哥兒'],
+    '賈探春': ['賈探春', '探春', '三姑娘', '賈三姑娘'],
+    '李紈': ['李紈', '李宮裁', '紈姐'],
+    '妙玉': ['妙玉', '妙師傅', '師傅'],
+    '平兒': ['平兒', '平姑娘', '平姐'],
+    '迎春': ['迎春', '二姑娘', '迎春姑娘'],
+    '王夫人': ['王夫人', '夫人', '王大夫人'],
+    '史大姑娘': ['史大姑娘', '大姑娘', '湘雲姐姐'],
+    '豐兒': ['豐兒', '豐哥兒'],
+    '紫鵑': ['紫鵑', '鵑兒'],
+    '麝月': ['麝月', '月姐'],
+    '秋紋': ['秋紋', '紋姐'],
+    '寶珠': ['寶珠'],
+    '小紅': ['小紅', '紅兒'],
+    '彩雲': ['彩雲'],
+    '金釧': ['金釧', '釧姐'],
+    '玉釧': ['玉釧'],
+    '芳官': ['芳官'],
+    '秦可卿': ['秦可卿', '可卿', '秦氏'],
+    '尤三姐': ['尤三姐', '三姐'],
+    '尤二姐': ['尤二姐', '二姐'],
+    '賈赦': ['賈赦', '赦老爺'],
+    '賈敬': ['賈敬', '敬老爺'],
+    '賈珍': ['賈珍', '珍大爺'],
+    '賈蓉': ['賈蓉'],
+    '巧姐': ['巧姐', '巧姑娘'],
+    '香菱': ['香菱', '菱兒', '甄英蓮', '英蓮'],
+    '柳五兒': ['柳五兒', '五兒'],
+}
+
+def find_characters_in_window(window):
+    present_characters = set()
+    for main_character, variations in character_variations.items():
+        if any(variation in window for variation in variations):
+            present_characters.add(main_character)
+    return present_characters
+
+sentences = re.split(r'[。！？]', text)
+
+interactions = []
+
+for sentence in sentences:
+    tokens = jieba.lcut(sentence)  
+    present_characters = find_characters_in_window(tokens) 
+    
+    if len(present_characters) > 1: 
+        sorted_pairs = set()
+        for character1 in present_characters:
+            for character2 in present_characters:
+                if character1 != character2: 
+                    sorted_pair = tuple(sorted([character1, character2]))
+                    sorted_pairs.add(sorted_pair)
+        interactions.extend(sorted_pairs)
+
+interaction_counts = Counter(interactions)
+
+with open(f'{base_directory}\\character_interactions_with_nicknames.csv', 'w', newline='', encoding='utf-8-sig') as csvfile:
+    csvwriter = csv.writer(csvfile)
+    csvwriter.writerow(['Source', 'Target', 'Weight'])
+    for (source, target), weight in interaction_counts.items():
+        csvwriter.writerow([source, target, weight])
+
+print("Character interactions saved to 'character_interactions_with_nicknames.csv'.")
+    '''
+    st.code(code, language="python")
+else:
+    st.write("Please upload a CSV file to proceed with the analysis.")
